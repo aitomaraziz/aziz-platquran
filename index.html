@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>منصة عزيز للتعليم عن بعد</title>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ══════════════════════════════════════════
+   RESET & VARIABLES
+══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #05070a;
+  --surface: #0e1420;
+  --surface2: #131c2d;
+  --teal: #00e5c3;
+  --teal-glow: rgba(0,229,195,0.18);
+  --teal-dim: rgba(0,229,195,0.08);
+  --red: #ff4757;
+  --text: #e8edf5;
+  --muted: #6b7280;
+  --border: rgba(255,255,255,0.07);
+  --glass: rgba(10,16,28,0.82);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.55);
+}
+
+html, body {
+  height: 100%; width: 100%;
+  font-family: 'Cairo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hidden { display: none !important; }
+
+/* ══════════════════════════════════════════
+   STARS CANVAS
+══════════════════════════════════════════ */
+#bg-canvas {
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+#toast {
+  position: fixed;
+  bottom: max(28px, env(safe-area-inset-bottom, 28px));
+  left: 50%; transform: translateX(-50%);
+  padding: 10px 22px;
+  border-radius: 30px;
+  font-size: 0.82rem; font-weight: 600;
+  z-index: 9999;
+  white-space: nowrap;
+  max-width: 90vw;
+  text-align: center;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════
+   SECURITY BADGE
+══════════════════════════════════════════ */
+.security-badge {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top, 14px));
+  right: max(16px, env(safe-area-inset-right, 16px));
+  background: rgba(0,229,195,0.08);
+  border: 1px solid rgba(0,229,195,0.25);
+  padding: 4px 14px; border-radius: 20px;
+  font-size: 0.7rem; color: var(--teal); z-index: 200;
+  backdrop-filter: blur(10px);
+}
+
+/* ══════════════════════════════════════════
+   LOBBY — DESKTOP
+══════════════════════════════════════════ */
+#lobby {
+  position: relative; z-index: 10;
+  height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.lobby-card {
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(0,229,195,0.2);
+  padding: clamp(28px, 4vw, 48px) clamp(24px, 3.5vw, 44px);
+  border-radius: var(--radius-lg);
+  width: 100%; max-width: 460px;
+  box-shadow: 0 0 80px rgba(0,229,195,0.06), var(--shadow);
+  animation: fadeUp 0.5s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo */
+.logo-area { text-align: center; margin-bottom: 28px; }
+.logo-icon {
+  width: 56px; height: 56px; margin: 0 auto 12px;
+  background: var(--teal-glow);
+  border: 1px solid rgba(0,229,195,0.3);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+}
+.logo-area h2 {
+  font-size: clamp(1.3rem, 3vw, 1.6rem);
+  font-weight: 900; color: var(--teal);
+  cursor: pointer; user-select: none;
+  letter-spacing: -0.3px;
+}
+.logo-area p { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+
+/* Form Fields */
+.field-group { margin-bottom: 14px; }
+.field-label {
+  display: block; font-size: 0.76rem;
+  color: #9ca3af; margin-bottom: 5px; font-weight: 600;
+}
+.field-input, .field-select {
+  width: 100%; padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.35);
+  color: var(--text);
+  font-family: 'Cairo', sans-serif; font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.field-input:focus, .field-select:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0,229,195,0.1);
+}
+.field-select option { background: #111827; }
+
+/* Role Switcher */
+.role-switcher {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 18px;
+}
+.role-btn {
+  padding: 12px 8px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.role-btn.active {
+  border-color: var(--teal);
+  background: var(--teal-dim);
+  color: var(--teal);
+  box-shadow: 0 0 12px rgba(0,229,195,0.12);
+}
+
+/* Primary Button */
+.btn-primary {
+  width: 100%; padding: 13px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: linear-gradient(135deg, #00e5c3 0%, #00c4a7 100%);
+  color: #000; font-family: 'Cairo', sans-serif;
+  font-weight: 700; font-size: 0.95rem;
+  cursor: pointer; margin-top: 6px;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(0,229,195,0.28);
+  -webkit-appearance: none;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(0,229,195,0.4); }
+.btn-primary:active { transform: scale(0.98); }
+
+.hint-text { font-size: 0.66rem; color: #374151; text-align: center; margin-top: 14px; }
+
+/* ══════════════════════════════════════════
+   ADMIN PANEL
+══════════════════════════════════════════ */
+#admin-panel {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.96);
+  z-index: 900;
+  overflow-y: auto;
+  padding: 24px 20px;
+}
+.admin-inner { max-width: 660px; margin: 0 auto; }
+.admin-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+  position: sticky; top: 0; background: rgba(0,0,0,0.96);
+  padding: 10px 0; z-index: 1;
+}
+.admin-header h3 { color: var(--teal); font-size: 1.1rem; }
+.admin-close {
+  background: #1f2937; border: 1px solid #374151; color: #fff;
+  padding: 7px 18px; border-radius: var(--radius-sm);
+  cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.82rem;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 540px) {
+  .admin-grid { grid-template-columns: 1fr; }
+}
+
+.admin-section h4 { font-size: 0.82rem; color: var(--muted); margin-bottom: 10px; }
+.admin-section .field-input,
+.admin-section .field-select {
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+}
+.admin-btn {
+  width: 100%; padding: 10px;
+  border-radius: var(--radius-sm);
+  border: none; background: var(--teal); color: #000;
+  font-weight: 700; cursor: pointer;
+  font-family: 'Cairo', sans-serif; font-size: 0.85rem;
+  transition: opacity 0.2s;
+}
+.admin-btn:hover { opacity: 0.85; }
+
+.user-item {
+  background: var(--surface2); padding: 9px 12px; margin-bottom: 7px;
+  border-radius: var(--radius-sm);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.76rem; gap: 8px;
+}
+.user-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.del-btn {
+  background: var(--red); border: none; color: #fff;
+  padding: 4px 10px; border-radius: 6px;
+  cursor: pointer; font-size: 0.72rem; flex-shrink: 0;
+  font-family: 'Cairo', sans-serif;
+}
+
+/* ══════════════════════════════════════════
+   CALL SCREEN — BASE
+══════════════════════════════════════════ */
+#call-screen {
+  position: fixed; inset: 0; z-index: 100;
+  background: #000;
+  display: flex; flex-direction: column;
+}
+
+#remote-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+#remote-placeholder {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 12px; color: var(--muted); font-size: 0.9rem;
+}
+#remote-placeholder .big-icon { font-size: 3rem; }
+
+/* ── Top Bar ── */
+.call-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: clamp(52px, 7vh, 64px);
+  padding: 0 clamp(12px, 2vw, 24px);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%);
+  z-index: 20;
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.topbar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.user-chip {
+  background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+  padding: 5px 12px; border-radius: 20px; font-size: 0.78rem;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.user-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.room-id-chip {
+  background: rgba(0,0,0,0.5); border: 1px solid rgba(0,229,195,0.3);
+  padding: 5px 12px; border-radius: 20px; font-size: 0.75rem;
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  transition: border-color 0.2s;
+  white-space: nowrap;
+}
+.room-id-chip:hover { border-color: var(--teal); }
+.room-id-chip code { color: var(--teal); font-family: 'DM Mono', monospace; }
+
+.topbar-end-btn {
+  background: var(--red); border: none; color: #fff;
+  padding: 7px 16px; border-radius: var(--radius-sm);
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+  font-size: 0.8rem; font-weight: 700;
+  flex-shrink: 0; white-space: nowrap;
+}
+
+/* ── PiP (local video) ── */
+.pip-window {
+  position: absolute;
+  border: 2px solid var(--teal);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  z-index: 15;
+  transition: all 0.3s ease;
+  /* Desktop default */
+  width: clamp(160px, 16vw, 240px);
+  height: clamp(120px, 12vw, 180px);
+  bottom: clamp(100px, 14vh, 130px);
+  right: clamp(16px, 2vw, 28px);
+}
+#local-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ── Chat Panel ── */
+.chat-panel {
+  position: absolute;
+  z-index: 50;
+  background: var(--glass);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex; flex-direction: column;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.chat-header {
+  padding: 11px 15px; border-bottom: 1px solid var(--border);
+  font-size: 0.82rem; font-weight: 700; color: var(--teal);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.chat-minimize { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; }
+
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.chat-messages::-webkit-scrollbar { width: 3px; }
+.chat-messages::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+.msg {
+  padding: 7px 11px; border-radius: 10px;
+  max-width: 88%; font-size: 0.8rem; line-height: 1.45;
+  word-break: break-word;
+}
+.msg.me { background: var(--teal); color: #000; align-self: flex-start; border-bottom-right-radius: 3px; }
+.msg.remote { background: var(--surface2); color: var(--text); align-self: flex-end; border-bottom-left-radius: 3px; }
+.msg.system-msg { align-self: center; font-size: 0.7rem; color: var(--muted); background: none; padding: 2px 0; max-width: 100%; text-align: center; }
+
+.chat-input-row {
+  padding: 9px 10px; border-top: 1px solid var(--border);
+  display: flex; gap: 6px; flex-shrink: 0;
+}
+.chat-input {
+  flex: 1; background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(0,229,195,0.2);
+  border-radius: var(--radius-sm); color: #fff;
+  padding: 7px 10px; outline: none;
+  font-family: 'Cairo', sans-serif; font-size: 0.8rem;
+  transition: border-color 0.2s;
+}
+.chat-input:focus { border-color: var(--teal); }
+.send-btn {
+  background: var(--teal); border: none;
+  border-radius: var(--radius-sm); cursor: pointer;
+  padding: 7px 13px; font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* ── Control Bar ── */
+.control-bar {
+  position: absolute; bottom: clamp(18px, 3vh, 32px);
+  left: 50%; transform: translateX(-50%);
+  display: flex; gap: clamp(8px, 1.5vw, 14px);
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  padding: clamp(10px, 1.5vh, 16px) clamp(18px, 3vw, 32px);
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+  z-index: 20;
+  padding-bottom: max(clamp(10px, 1.5vh, 16px), env(safe-area-inset-bottom, 0px));
+}
+
+.ctrl-btn {
+  border-radius: 50%; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.1); color: #fff;
+  transition: all 0.2s;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  width: clamp(44px, 5.5vw, 54px);
+  height: clamp(44px, 5.5vw, 54px);
+  flex-shrink: 0;
+}
+.ctrl-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.08); }
+.ctrl-btn:active { transform: scale(0.95); }
+.ctrl-btn.muted { background: rgba(107,114,128,0.4); }
+.ctrl-btn.danger { background: var(--red); }
+.ctrl-btn.active-teal { background: var(--teal-glow); border: 1px solid rgba(0,229,195,0.4); }
+
+/* ══════════════════════════════════════════
+   DESKTOP LAYOUT (≥ 768px)
+══════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .chat-panel {
+    width: clamp(260px, 22vw, 320px);
+    top: clamp(64px, 9vh, 80px);
+    bottom: clamp(90px, 12vh, 116px);
+    left: clamp(16px, 2vw, 28px);
+  }
+
+  #remote-placeholder { font-size: 1rem; }
+}
+
+/* ══════════════════════════════════════════
+   MOBILE LAYOUT (< 768px)
+══════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* Lobby scrollable */
+  #lobby {
+    align-items: flex-start;
+    padding: 20px 16px;
+    padding-top: max(60px, env(safe-area-inset-top, 60px));
+    overflow-y: auto;
+    height: 100%;
+  }
+  .lobby-card {
+    max-width: 100%;
+    padding: 24px 18px;
+    border-radius: var(--radius-lg);
+    margin: auto 0;
+  }
+
+  /* PiP smaller on mobile */
+  .pip-window {
+    width: 110px; height: 82px;
+    bottom: clamp(88px, 12vh, 110px);
+    right: 12px;
+  }
+
+  /* Chat panel: slides up from bottom on mobile */
+  .chat-panel {
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    height: 0; /* collapsed by default */
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: none;
+    transition: height 0.35s cubic-bezier(0.4,0,0.2,1);
+    max-height: 55vh;
+  }
+  .chat-panel.chat-open {
+    height: 55vh;
+  }
+  .chat-panel.hidden { display: none !important; }
+
+  /* Control bar compact */
+  .control-bar {
+    gap: 8px;
+    padding: 10px 16px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
+  }
+
+  /* topbar on mobile */
+  .topbar-left { flex: 1; min-width: 0; overflow: hidden; }
+  .room-id-chip { display: none; }
+  #room-id-mobile-wrap { display: flex !important; }
+
+  /* admin grid */
+  .admin-grid { grid-template-columns: 1fr; }
+}
+
+/* Mobile Room ID below topbar */
+#room-id-mobile-wrap {
+  display: none;
+  position: absolute; top: clamp(52px, 7vh, 64px); left: 0; right: 0;
+  padding: 6px 14px; z-index: 19;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+  justify-content: center;
+  align-items: center; gap: 8px;
+  font-size: 0.73rem;
+}
+#room-id-mobile-wrap code { color: var(--teal); font-family: 'DM Mono', monospace; font-size: 0.78rem; }
+#room-id-mobile-wrap button {
+  background: rgba(0,229,195,0.15); border: 1px solid rgba(0,229,195,0.3);
+  color: var(--teal); border-radius: 6px; padding: 2px 10px;
+  font-size: 0.7rem; cursor: pointer; font-family: 'Cairo', sans-serif;
+}
+
+/* ══════════════════════════════════════════
+   LANDSCAPE MOBILE
+══════════════════════════════════════════ */
+@media (max-height: 500px) and (orientation: landscape) {
+  .chat-panel { display: none !important; }
+  .pip-window { width: 100px; height: 75px; bottom: 80px; }
+  .control-bar { padding: 8px 20px; gap: 8px; }
+  .ctrl-btn { width: 40px; height: 40px; font-size: 0.9rem; }
+}
+
+/* ══════════════════════════════════════════
+   STATUS OVERLAY
+══════════════════════════════════════════ */
+#status-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px;
+  background: rgba(0,0,0,0.6);
+  z-index: 60; backdrop-filter: blur(4px);
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#status-text { font-size: 0.85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="security-badge">🔒 E2EE</div>
+<div id="toast" class="hidden"></div>
+
+<!-- ══════════════ LOBBY ══════════════ -->
+<div id="lobby">
+  <div class="lobby-card">
+    <div class="logo-area">
+      <div class="logo-icon">🎓</div>
+      <h2 onclick="openAdminCheck()">منصة عزيز للتعليم</h2>
+      <p>نظام التعليم عن بعد الآمن · v4 Pro</p>
+    </div>
+
+    <!-- Role Switcher -->
+    <div class="role-switcher">
+      <button class="role-btn active" id="btn-student" onclick="setRole('student')">🎓 تلميذ</button>
+      <button class="role-btn" id="btn-host" onclick="setRole('host')">👨‍🏫 أستاذ</button>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">اسم المستخدم</label>
+      <input type="text" id="u-name" class="field-input" placeholder="أدخل اسم المستخدم" autocomplete="username"/>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">كلمة المرور</label>
+      <input type="password" id="u-pass" class="field-input" placeholder="أدخل كلمة المرور" autocomplete="current-password"/>
+    </div>
+
+    <div id="student-fields" class="field-group">
+      <label class="field-label">معرّف الغرفة (من الأستاذ)</label>
+      <input type="text" id="r-id" class="field-input" placeholder="مثال: ahmed_room" autocorrect="off" autocapitalize="none"/>
+    </div>
+
+    <button class="btn-primary" onclick="login()">دخول الغرفة ←</button>
+    <p class="hint-text">الإدارة فقط هي من تمنح حسابات الدخول</p>
+  </div>
+</div>
+
+<!-- ══════════════ ADMIN PANEL ══════════════ -->
+<div id="admin-panel" class="hidden">
+  <div class="admin-inner">
+    <div class="admin-header">
+      <h3>⚙️ لوحة الإدارة</h3>
+      <button class="admin-close" onclick="$('admin-panel').classList.add('hidden')">✕ إغلاق</button>
+    </div>
+    <hr style="border-color:#1f2937; margin-bottom:20px">
+    <div class="admin-grid">
+      <div class="admin-section">
+        <h4>إضافة مستخدم</h4>
+        <input type="text" id="adm-user" class="field-input" placeholder="اسم المستخدم"/>
+        <input type="text" id="adm-pass" class="field-input" placeholder="كلمة المرور"/>
+        <select id="adm-role" class="field-select">
+          <option value="host">👨‍🏫 أستاذ</option>
+          <option value="student">🎓 تلميذ</option>
+        </select>
+        <button class="admin-btn" onclick="addUser()">💾 حفظ</button>
+      </div>
+      <div class="admin-section">
+        <h4>المستخدمون المسجلون</h4>
+        <div id="users-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ CALL SCREEN ══════════════ -->
+<div id="call-screen" class="hidden">
+
+  <!-- Remote Video -->
+  <video id="remote-video" autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+  <div id="remote-placeholder">
+    <div class="big-icon">📡</div>
+    <span id="status-text-inline">في انتظار الاتصال...</span>
+  </div>
+
+  <!-- Top Bar -->
+  <div class="call-topbar">
+    <div class="topbar-left">
+      <div class="user-chip">
+        <span class="dot"></span>
+        <span id="display-name"></span>
+      </div>
+      <div id="room-id-chip-desktop" class="room-id-chip hidden" onclick="copyID()">
+        🏫 <code id="room-code"></code> · نسخ
+      </div>
+    </div>
+    <button class="topbar-end-btn" onclick="endCall()">إنهاء المكالمة</button>
+  </div>
+
+  <!-- Mobile Room ID Strip -->
+  <div id="room-id-mobile-wrap" class="hidden">
+    <span>معرف الغرفة: <code id="room-code-mobile"></code></span>
+    <button onclick="copyID()">نسخ</button>
+  </div>
+
+  <!-- PiP Local Video -->
+  <div class="pip-window">
+    <video id="local-video" autoplay muted playsinline></video>
+  </div>
+
+  <!-- Chat Panel -->
+  <div class="chat-panel" id="chat-panel">
+    <div class="chat-header">
+      💬 الدردشة المباشرة
+      <button class="chat-minimize" onclick="toggleChat()" title="إخفاء">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-msgs"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" class="chat-input" placeholder="اكتب رسالة..." autocomplete="off"/>
+      <button class="send-btn" onclick="sendMsg()">📩</button>
+    </div>
+  </div>
+
+  <!-- Control Bar -->
+  <div class="control-bar">
+    <button class="ctrl-btn" id="audio-btn" onclick="toggleAudio()" title="ميكروفون">🎤</button>
+    <button class="ctrl-btn" id="video-btn" onclick="toggleVideo()" title="كاميرا">📷</button>
+    <button class="ctrl-btn" id="chat-btn" onclick="toggleChat()" title="دردشة">💬</button>
+    <button class="ctrl-btn danger" onclick="endCall()" title="إنهاء">📵</button>
+  </div>
+
+  <!-- Connection Status Overlay -->
+  <div id="status-overlay">
+    <div class="spinner"></div>
+    <div id="status-text">جاري الاتصال...</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+/* ─── Helpers ─── */
+const $ = id => document.getElementById(id);
+
+/* ─── Stars ─── */
+(function(){
+  const c = $('bg-canvas'), ctx = c.getContext('2d');
+  const resize = () => { c.width = innerWidth; c.height = innerHeight; };
+  resize(); window.addEventListener('resize', resize);
+  const stars = Array.from({length:150}, () => ({
+    x: Math.random(), y: Math.random(),
+    r: Math.random() * 1.3 + 0.3,
+    a: Math.random() * 0.5 + 0.05,
+    da: (Math.random() - 0.5) * 0.004
+  }));
+  (function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s => {
+      s.a = Math.max(0.04, Math.min(0.65, s.a + s.da));
+      if(s.a <= 0.04 || s.a >= 0.65) s.da *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x*c.width, s.y*c.height, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(0,229,195,${s.a.toFixed(2)})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+})();
+
+/* ─── DB ─── */
+let db = JSON.parse(localStorage.getItem('aziz_edu_db') || '{"users":[]}');
+let myData = null;
+let clickCount = 0;
+const isMobile = () => window.innerWidth < 768;
+
+/* ─── Role Switcher ─── */
+let selectedRole = 'student';
+function setRole(role) {
+  selectedRole = role;
+  $('btn-student').classList.toggle('active', role === 'student');
+  $('btn-host').classList.toggle('active', role === 'host');
+  $('student-fields').classList.toggle('hidden', role === 'host');
+}
+
+/* ─── Admin ─── */
+function openAdminCheck(){
+  clickCount++;
+  if(clickCount >= 5){
+    const p = prompt("🔐 كلمة مرور الإدارة:");
+    if(p === "123456"){
+      $('admin-panel').classList.remove('hidden');
+      renderUsers();
+    } else if(p !== null){
+      showToast("كلمة المرور غير صحيحة");
+    }
+    clickCount = 0;
+  }
+}
+
+function addUser(){
+  const user = $('adm-user').value.trim();
+  const pass = $('adm-pass').value.trim();
+  const role = $('adm-role').value;
+  if(!user || !pass) return alert("يرجى تعبئة جميع الحقول");
+  if(db.users.find(u => u.user === user)) return alert("هذا المستخدم موجود بالفعل");
+  db.users.push({user, pass, role});
+  saveDB();
+  renderUsers();
+  $('adm-user').value = ''; $('adm-pass').value = '';
+  showToast("تم إضافة المستخدم ✓", "ok");
+}
+
+function renderUsers(){
+  $('users-list').innerHTML = db.users.length === 0
+    ? '<p style="font-size:0.75rem;color:#4b5563;text-align:center;padding:12px">لا يوجد مستخدمون</p>'
+    : db.users.map((u,i) => `
+        <div class="user-item">
+          <span>${u.role==='host'?'👨‍🏫':'🎓'} <strong>${u.user}</strong> (${u.pass})</span>
+          <button class="del-btn" onclick="deleteUser(${i})">حذف</button>
+        </div>`).join('');
+}
+
+function deleteUser(i){
+  if(!confirm("حذف هذا المستخدم؟")) return;
+  db.users.splice(i,1);
+  saveDB(); renderUsers();
+}
+
+function saveDB(){ localStorage.setItem('aziz_edu_db', JSON.stringify(db)); }
+
+/* ─── Sanitize ID: converts any string to PeerJS-safe alphanumeric ─── */
+function sanitizeID(str){
+  // encode to base36-like safe string: keep only [a-z0-9-]
+  let safe = '';
+  for(let i = 0; i < str.length; i++){
+    const c = str[i];
+    if(/[a-zA-Z0-9]/.test(c)){
+      safe += c.toLowerCase();
+    } else {
+      // replace any non-alphanumeric with its char code in hex
+      safe += c.charCodeAt(0).toString(16);
+    }
+  }
+  // PeerJS IDs must not exceed 64 chars
+  return safe.slice(0, 50);
+}
+
+/* ─── Login ─── */
+function login(){
+  const user = $('u-name').value.trim();
+  const pass = $('u-pass').value.trim();
+  const role = selectedRole;
+  const room = $('r-id').value.trim();
+
+  const found = db.users.find(u => u.user===user && u.pass===pass && u.role===role);
+  if(!found) return showToast("بيانات الدخول غير صحيحة أو غير مسجلة");
+
+  myData = found;
+  if(role === 'host'){
+    // roomID based on sanitized username — shown to user as original name
+    const rawRoomID = user + "_room";
+    myData.displayRoomID = rawRoomID;   // for display
+    myData.safeRoomID = sanitizeID(rawRoomID); // for PeerJS
+    startRoom(myData.safeRoomID, rawRoomID);
+  } else {
+    if(!room) return showToast("يرجى إدخال معرف الغرفة");
+    const safeRoom = sanitizeID(room);
+    startRoom(safeRoom, room);
+  }
+}
+
+/* ─── Start Room ─── */
+async function startRoom(roomID, displayRoomID){
+  displayRoomID = displayRoomID || roomID;
+  $('lobby').classList.add('hidden');
+  $('call-screen').classList.remove('hidden');
+  $('display-name').textContent = myData.user;
+
+  if(myData.role === 'host'){
+    // show safe ID (this is what students must type)
+    $('room-code').textContent = roomID;
+    $('room-code-mobile').textContent = roomID;
+    $('room-code').dataset.safe = roomID;
+    $('room-id-chip-desktop').classList.remove('hidden');
+    $('room-id-mobile-wrap').style.display = 'flex';
+  }
+
+  // Get media
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+    $('local-video').srcObject = localStream;
+  } catch(e){
+    try { localStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e2){ showToast("تعذّر الوصول للكاميرا/الميكروفون"); }
+  }
+
+  initPeer(roomID);
+}
+
+/* ─── PeerJS ─── */
+let peer, localStream, currentConn;
+let audioEnabled = true, videoEnabled = true;
+let chatVisible = false;
+
+function initPeer(roomID){
+  // roomID here is already sanitized
+  const suffix = myData.role==='host'
+    ? 'h'
+    : 's' + Math.random().toString(36).substr(2,6);
+
+  const myPeerID = roomID + suffix;
+
+  peer = new Peer(myPeerID, {debug:1});
+
+  peer.on('open', id => {
+    hideStatusOverlay();
+    showToast("متصل بالشبكة ✓", "ok");
+
+    if(myData.role === 'student'){
+      const hostID = roomID + 'h';
+
+      const conn = peer.connect(hostID, {metadata:{name: myData.user}});
+      currentConn = conn;
+      setupChat(conn);
+
+      conn.on('open', () => {
+        if(localStream){
+          const call = peer.call(hostID, localStream);
+          setupVideo(call);
+        }
+      });
+    }
+  });
+
+  peer.on('call', call => {
+    call.answer(localStream || undefined);
+    setupVideo(call);
+  });
+
+  peer.on('connection', conn => {
+    currentConn = conn;
+    setupChat(conn);
+    appendMsg(`📌 ${conn.metadata?.name || 'مستخدم'} انضم`, 'system');
+  });
+
+  peer.on('error', err => {
+    $('status-text').textContent = 'خطأ في الاتصال: ' + err.type;
+    if(err.type === 'unavailable-id'){
+      showToast("هذه الغرفة مشغولة");
+      setTimeout(()=>location.reload(), 2500);
+    }
+  });
+}
+
+function hideStatusOverlay(){
+  const ov = $('status-overlay');
+  ov.style.opacity = '0';
+  setTimeout(()=>{ ov.style.display='none'; }, 400);
+}
+
+function setupVideo(call){
+  call.on('stream', stream => {
+    $('remote-video').srcObject = stream;
+    $('remote-placeholder').style.display = 'none';
+  });
+  call.on('close', ()=>{ $('remote-video').srcObject=null; });
+}
+
+function setupChat(conn){
+  conn.on('data', data => appendMsg(data, 'remote'));
+  conn.on('close', ()=> appendMsg('انتهى الاتصال', 'system'));
+}
+
+/* ─── Chat ─── */
+function sendMsg(){
+  const msg = $('chat-input').value.trim();
+  if(!msg) return;
+  if(currentConn && currentConn.open){
+    currentConn.send(myData.user + ': ' + msg);
+    appendMsg(msg, 'me');
+  } else {
+    showToast("لا يوجد اتصال نشط");
+  }
+  $('chat-input').value = '';
+}
+
+function appendMsg(msg, type){
+  if(type === 'system'){
+    const div = document.createElement('div');
+    div.className = 'msg system-msg';
+    div.textContent = msg;
+    $('chat-msgs').appendChild(div);
+  } else {
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    div.textContent = msg;
+    $('chat-msgs').appendChild(div);
+  }
+  $('chat-msgs').scrollTop = $('chat-msgs').scrollHeight;
+}
+
+function toggleChat(){
+  chatVisible = !chatVisible;
+  const panel = $('chat-panel');
+  const btn = $('chat-btn');
+
+  if(isMobile()){
+    panel.classList.toggle('chat-open', chatVisible);
+  } else {
+    panel.classList.toggle('hidden', !chatVisible);
+  }
+
+  btn.classList.toggle('active-teal', chatVisible);
+}
+
+$('chat-input').addEventListener('keydown', e => { if(e.key==='Enter') sendMsg(); });
+
+/* ─── Controls ─── */
+function toggleAudio(){
+  if(!localStream) return;
+  const track = localStream.getAudioTracks()[0];
+  if(!track) return;
+  audioEnabled = !audioEnabled;
+  track.enabled = audioEnabled;
+  const btn = $('audio-btn');
+  btn.textContent = audioEnabled ? '🎤' : '🔇';
+  btn.classList.toggle('muted', !audioEnabled);
+}
+
+function toggleVideo(){
+  if(!localStream) return;
+  const track = localStream.getVideoTracks()[0];
+  if(!track) return;
+  videoEnabled = !videoEnabled;
+  track.enabled = videoEnabled;
+  const btn = $('video-btn');
+  btn.textContent = videoEnabled ? '📷' : '🚫';
+  btn.classList.toggle('muted', !videoEnabled);
+}
+
+function endCall(){
+  if(confirm("هل تريد إنهاء المكالمة والخروج؟")){
+    if(peer) peer.destroy();
+    if(localStream) localStream.getTracks().forEach(t=>t.stop());
+    location.reload();
+  }
+}
+
+/* ─── Copy Room ID ─── */
+function copyID(){
+  // copy the safe PeerJS ID (what students need to enter)
+  const safeCode = $('room-code').dataset.safe || $('room-code').textContent;
+  navigator.clipboard.writeText(safeCode)
+    .then(()=> showToast("تم نسخ معرف الغرفة ✓", "ok"))
+    .catch(()=>{
+      const ta = document.createElement('textarea');
+      ta.value = safeCode; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast("تم النسخ ✓", "ok");
+    });
+}
+
+/* ─── Toast ─── */
+let toastTimer;
+function showToast(msg, type=""){
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.background = type==="ok" ? "#00b89c" : "#ef4444";
+  t.style.color = type==="ok" ? "#000" : "#fff";
+  t.classList.remove('hidden');
+  t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{
+    t.style.opacity='0';
+    setTimeout(()=>t.classList.add('hidden'), 350);
+  }, 3000);
+}
+
+/* ─── Init chat visibility ─── */
+window.addEventListener('DOMContentLoaded', ()=>{
+  // Desktop: show chat by default
+  if(!isMobile()){
+    chatVisible = true;
+    $('chat-btn').classList.add('active-teal');
+  }
+});
+
+// Handle resize: adjust chat visibility
+window.addEventListener('resize', ()=>{
+  const panel = $('chat-panel');
+  if(!isMobile()){
+    if(chatVisible) panel.classList.remove('hidden', 'chat-open');
+    else panel.classList.add('hidden');
+  } else {
+    panel.classList.remove('hidden');
+    if(!chatVisible) panel.classList.remove('chat-open');
+    else panel.classList.add('chat-open');
+  }
+});
+</script>
+</body>
+</html>
